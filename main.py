@@ -85,6 +85,29 @@ def main():
         print(f"Status: error")
         print(f"Error: {vt_result['error']}")
 
+    # MalwareBazaar file check
+
+    print()
+    print("=== MalwareBazaar ===")
+
+    mb_result = check_mb(hashes["sha256"])
+
+    if mb_result["status"] == "known":
+        print(f"Status: known")
+        print(f"Signature: {mb_result['signature']}")
+        print(f"File name: {mb_result['file_name']}")
+        tags = ", ".join(mb_result["tags"]) if mb_result["tags"] else "none"
+        print(f"Tags: {tags}")
+        print(f"First seen: {mb_result['first_seen']}")
+        print(f"Reporter: {mb_result['reporter']}")
+        print(f"Link: {mb_result['link']}")
+    elif mb_result["status"] == "unknown":
+        print(f"Status: unknown")
+        print(f"{mb_result['message']}")
+    else:
+        print(f"Status: error")
+        print(f"Error: {mb_result['error']}")
+
 
 if __name__ == "__main__":
     main()
