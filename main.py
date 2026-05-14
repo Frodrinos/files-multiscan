@@ -71,18 +71,15 @@ def main():
     vt_result = check_vt(hashes["sha256"])
 
     if vt_result["status"] == "known":
-        print(f"Status: known")
         print(f"Detections: {vt_result['detections']}")
         print(f"Verdict: {vt_result['verdict']}")
         print(f"Reputation: {vt_result['reputation']}")
         print(f"First seen: {vt_result['first_seen']}")
         print(f"Link: {vt_result['link']}")
     elif vt_result["status"] == "unknown":
-        print(f"Status: unknown")
         print(f"{vt_result['message']}")
-        print(f"Upload manually via https://www.virustotal.com/gui/home/upload")
+        print("Upload manually via https://www.virustotal.com/gui/home/upload")
     else:
-        print(f"Status: error")
         print(f"Error: {vt_result['error']}")
 
     # MalwareBazaar file check
@@ -93,7 +90,6 @@ def main():
     mb_result = check_mb(hashes["sha256"])
 
     if mb_result["status"] == "known":
-        print(f"Status: known")
         print(f"Signature: {mb_result['signature']}")
         print(f"File name: {mb_result['file_name']}")
         tags = ", ".join(mb_result["tags"]) if mb_result["tags"] else "none"
@@ -102,10 +98,8 @@ def main():
         print(f"Reporter: {mb_result['reporter']}")
         print(f"Link: {mb_result['link']}")
     elif mb_result["status"] == "unknown":
-        print(f"Status: unknown")
         print(f"{mb_result['message']}")
     else:
-        print(f"Status: error")
         print(f"Error: {mb_result['error']}")
 
 

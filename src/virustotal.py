@@ -1,8 +1,8 @@
 """VirusTotal API client for file scanning."""
 
+import os
 from datetime import datetime
 
-import os
 import requests
 
 VT_API_URL = "https://www.virustotal.com/api/v3/files"
@@ -53,7 +53,7 @@ def check_file_hash(file_hash: str) -> dict:
         data = response.json()
         attributes = data["data"]["attributes"]
 
-        stats = data["data"]["attributes"]["last_analysis_stats"]
+        stats = attributes["last_analysis_stats"]
         malicious = stats.get("malicious", 0)
         suspicious = stats.get("suspicious", 0)
         harmless = stats.get("harmless", 0)
@@ -68,22 +68,19 @@ def check_file_hash(file_hash: str) -> dict:
             verdict = "clean"
 
         return {
-            "status": "known",
             "detections": f"{malicious + suspicious}/{total}",
             "verdict": verdict,
-            "reputation": data["data"]["attributes"].get("reputation", 0),
+            "reputation": attributes.get("reputation", 0),
             "first_seen": format_timestamp(attributes.get("first_submission_date")),
             "link": f"{VT_SAMPLE_URL}/{file_hash}",
         }
 
     elif response.status_code == 404:
         return {
-            "status": "unknown",
-            "message": "File not in VirusTotal database",
+            "message": "File is not in VirusTotal database",
         }
 
     else:
         return {
-            "status": "error",
             "error": f"HTTP {response.status_code}: {response.text[:200]}",
         }
