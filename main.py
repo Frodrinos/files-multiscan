@@ -4,7 +4,9 @@ import sys
 import hashlib
 from pathlib import Path
 from dotenv import load_dotenv
-from src.virustotal import check_file_hash
+
+from src.virustotal import check_file_hash as check_vt
+from src.malware_bazaar import check_file_hash as check_mb
 
 load_dotenv()
 
@@ -61,16 +63,19 @@ def main():
     print(f"MD5:     {hashes['md5']}")
     print(f"SHA-1:   {hashes['sha1']}")
 
+    # VirusTotal file check
+
     print()
     print("=== VirusTotal ===")
 
-    vt_result = check_file_hash(hashes["sha256"])
+    vt_result = check_vt(hashes["sha256"])
 
     if vt_result["status"] == "known":
         print(f"Status: known")
         print(f"Detections: {vt_result['detections']}")
         print(f"Verdict: {vt_result['verdict']}")
         print(f"Reputation: {vt_result['reputation']}")
+        print(f"First seen: {vt_result['first_seen']}")
         print(f"Link: {vt_result['link']}")
     elif vt_result["status"] == "unknown":
         print(f"Status: unknown")

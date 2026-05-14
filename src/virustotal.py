@@ -1,9 +1,22 @@
 """VirusTotal API client for file scanning."""
 
+from datetime import datetime
+
 import os
 import requests
 
 VT_API_URL = "https://www.virustotal.com/api/v3/files"
+VT_SAMPLE_URL = "https://www.virustotal.com/gui/file"
+
+
+def format_timestamp(unix_timestamp):
+    """Convert Unix timestamp to readable date string."""
+    if not unix_timestamp:
+        return "N/A"
+    try:
+        return datetime.fromtimestamp(unix_timestamp).strftime("%Y-%m-%d %H:%M:%S")
+    except (TypeError, ValueError):
+        return "N/A"
 
 
 def check_file_hash(file_hash: str) -> dict:
@@ -38,6 +51,7 @@ def check_file_hash(file_hash: str) -> dict:
 
     if response.status_code == 200:
         data = response.json()
+        attributes = data["data"]["attributes"]
 
         stats = data["data"]["attributes"]["last_analysis_stats"]
         malicious = stats.get("malicious", 0)
@@ -58,7 +72,8 @@ def check_file_hash(file_hash: str) -> dict:
             "detections": f"{malicious + suspicious}/{total}",
             "verdict": verdict,
             "reputation": data["data"]["attributes"].get("reputation", 0),
-            "link": f"https://www.virustotal.com/gui/file/{file_hash}",
+            "first_seen": format_timestamp(attributes.get("first_submission_date")),
+            "link": f"{VT_SAMPLE_URL}/{file_hash}",
         }
 
     elif response.status_code == 404:
