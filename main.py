@@ -3,6 +3,10 @@
 import sys
 import hashlib
 from pathlib import Path
+from dotenv import load_dotenv
+from src.virustotal import check_file_hash
+
+load_dotenv()
 
 
 def compute_hashes(file_path: Path) -> dict:
@@ -56,6 +60,25 @@ def main():
     print(f"SHA-256: {hashes['sha256']}")
     print(f"MD5:     {hashes['md5']}")
     print(f"SHA-1:   {hashes['sha1']}")
+
+    print()
+    print("=== VirusTotal ===")
+
+    vt_result = check_file_hash(hashes["sha256"])
+
+    if vt_result["status"] == "known":
+        print(f"Status: known")
+        print(f"Detections: {vt_result['detections']}")
+        print(f"Verdict: {vt_result['verdict']}")
+        print(f"Reputation: {vt_result['reputation']}")
+        print(f"Link: {vt_result['link']}")
+    elif vt_result["status"] == "unknown":
+        print(f"Status: unknown")
+        print(f"{vt_result['message']}")
+        print(f"Upload manually via https://www.virustotal.com/gui/home/upload")
+    else:
+        print(f"Status: error")
+        print(f"Error: {vt_result['error']}")
 
 
 if __name__ == "__main__":
