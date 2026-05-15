@@ -68,6 +68,7 @@ def check_file_hash(file_hash: str) -> dict:
             verdict = "clean"
 
         return {
+            "status": "known",
             "detections": f"{malicious + suspicious}/{total}",
             "verdict": verdict,
             "reputation": attributes.get("reputation", 0),
@@ -77,10 +78,12 @@ def check_file_hash(file_hash: str) -> dict:
 
     elif response.status_code == 404:
         return {
+            "status": "unknown",
             "message": "File is not in VirusTotal database",
         }
 
     else:
         return {
+            "status": "error",
             "error": f"HTTP {response.status_code}: {response.text[:200]}",
         }

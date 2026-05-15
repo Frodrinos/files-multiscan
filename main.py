@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 
 from src.virustotal import check_file_hash as check_vt
 from src.malware_bazaar import check_file_hash as check_mb
+from src.hybrid_analysis import check_file_hash as check_ha
 
 load_dotenv()
 
@@ -101,6 +102,30 @@ def main():
         print(f"{mb_result['message']}")
     else:
         print(f"Error: {mb_result['error']}")
+
+    # Hybrid Analysis file check
+
+    print()
+    print("=== Hybrid Analysis ===")
+
+    ha_result = check_ha(hashes["sha256"])
+    print(f"Status: {ha_result['status']}")
+
+    if ha_result["status"] == "known":
+        print(f"Verdict: {ha_result['verdict']}")
+        print(f"Threat score: {ha_result['threat_score']}/100")
+        print(f"Scanners: {ha_result['scanners_count']} flagged as malicious")
+        print(f"Family: {ha_result['family']}")
+        print(f"File type: {ha_result['file_type']}")
+        print(f"Whitelisted: {ha_result['whitelisted']}")
+        tags = ", ".join(ha_result["tags"]) if ha_result["tags"] else "none"
+        print(f"Tags: {tags}")
+        print(f"First seen: {ha_result['first_seen']}")
+        print(f"Link: {ha_result['link']}")
+    elif ha_result["status"] == "unknown":
+        print(ha_result["message"])
+    else:
+        print(f"Error: {ha_result['error']}")
 
 
 if __name__ == "__main__":
