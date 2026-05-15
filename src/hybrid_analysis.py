@@ -5,6 +5,8 @@ from datetime import datetime
 
 import requests
 
+from src.rate_limiter import RateLimiter
+
 HA_API_URL = "https://www.hybrid-analysis.com/api/v2/overview"
 HA_SAMPLE_URL = "https://www.hybrid-analysis.com/sample"
 
@@ -16,6 +18,8 @@ VERDICT_MAP = {
     "malicious": "malicious",
     "ransomware": "malicious",
 }
+
+ha_limiter = RateLimiter(max_requests=100, window_seconds=60)
 
 
 def format_iso_timestamp(iso_string):
@@ -58,6 +62,7 @@ def check_file_hash(file_hash: str) -> dict:
 
     url = f"{HA_API_URL}/{file_hash}"
 
+    ha_limiter.wait_if_needed()
     try:
         response = requests.get(
             url,

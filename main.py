@@ -10,6 +10,7 @@ from src.virustotal import check_file_hash as check_vt
 from src.malware_bazaar import check_file_hash as check_mb
 from src.hybrid_analysis import check_file_hash as check_ha
 from src.aggregator import aggregate_results
+from src.colors import color_level, color_verdict, header, error_text
 
 load_dotenv()
 
@@ -58,13 +59,13 @@ def scan_single_file(file_path: Path) -> dict:
 
     # VirusTotal file check
     print()
-    print("=== VirusTotal ===")
+    print(header("=== VirusTotal ==="))
 
     vt_result = check_vt(hashes["sha256"])
 
     if vt_result["status"] == "known":
         print(f"Detections: {vt_result['detections']}")
-        print(f"Verdict: {vt_result['verdict']}")
+        print(f"Verdict: {color_verdict(vt_result['verdict'])}")
         print(f"Reputation: {vt_result['reputation']}")
         print(f"First seen: {vt_result['first_seen']}")
         print(f"Link: {vt_result['link']}")
@@ -72,11 +73,11 @@ def scan_single_file(file_path: Path) -> dict:
         print(f"{vt_result['message']}")
         print("Upload manually via https://www.virustotal.com/gui/home/upload")
     else:
-        print(f"Error: {vt_result['error']}")
+        print(error_text(f"Error: {vt_result['error']}"))
 
     # MalwareBazaar file check
     print()
-    print("=== MalwareBazaar ===")
+    print(header("=== MalwareBazaar ==="))
 
     mb_result = check_mb(hashes["sha256"])
 
@@ -91,16 +92,16 @@ def scan_single_file(file_path: Path) -> dict:
     elif mb_result["status"] == "unknown":
         print(f"{mb_result['message']}")
     else:
-        print(f"Error: {mb_result['error']}")
+        print(error_text(f"Error: {mb_result['error']}"))
 
     # Hybrid Analysis file check
     print()
-    print("=== Hybrid Analysis ===")
+    print(header("=== Hybrid Analysis ==="))
 
     ha_result = check_ha(hashes["sha256"])
 
     if ha_result["status"] == "known":
-        print(f"Verdict: {ha_result['verdict']}")
+        print(f"Verdict: {color_verdict(ha_result['verdict'])}")
         print(f"Threat score: {ha_result['threat_score']}/100")
         print(f"Scanners: {ha_result['scanners_count']} flagged as malicious")
         print(f"Family: {ha_result['family']}")
@@ -113,16 +114,16 @@ def scan_single_file(file_path: Path) -> dict:
     elif ha_result["status"] == "unknown":
         print(ha_result["message"])
     else:
-        print(f"Error: {ha_result['error']}")
+        print(error_text(f"Error: {ha_result['error']}"))
 
     # Combined verdict
     print()
-    print("=== Combined Verdict ===")
+    print(header("=== Combined Verdict ==="))
 
     aggregate = aggregate_results(vt_result, mb_result, ha_result)
     verdict = aggregate["verdict"]
 
-    print(f"Risk level: {verdict['level']} {verdict['icon']}")
+    print(f"Risk level: {color_level(verdict['level'])} {verdict['icon']}")
     print(f"Confidence: {verdict['confidence']}")
     print(f"Recommendation: {verdict['recommendation']}")
 
@@ -163,10 +164,9 @@ def scan_directory(directory: Path) -> None:
                 {"path": file_path, "confidence": verdict["confidence"]}
             )
 
-        print(f"[{i}/{total}] {file_path.name} - {verdict['icon']} {verdict['level']}")
-
-        if i < total:
-            time.sleep(2)
+        print(
+            f"[{i}/{total}] {file_path.name} - {verdict['icon']} {color_level(verdict['level'])}"
+        )
 
     print()
     print("=== Scan Summary ===")

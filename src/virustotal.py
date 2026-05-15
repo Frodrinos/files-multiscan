@@ -1,12 +1,17 @@
 """VirusTotal API client for file scanning."""
 
 import os
+import time
 from datetime import datetime
 
 import requests
 
+from src.rate_limiter import RateLimiter
+
 VT_API_URL = "https://www.virustotal.com/api/v3/files"
 VT_SAMPLE_URL = "https://www.virustotal.com/gui/file"
+
+vt_limiter = RateLimiter(max_requests=4, window_seconds=60)
 
 
 def format_timestamp(unix_timestamp):
@@ -44,10 +49,32 @@ def check_file_hash(file_hash: str) -> dict:
     url = f"{VT_API_URL}/{file_hash}"
     headers = {"x-apikey": api_key}
 
-    try:
-        response = requests.get(url, headers=headers, timeout=30)
-    except requests.RequestException as e:
-        return {"status": "error", "error": f"Network error: {e}"}
+    max_retries = 3
+    retry_count = 0
+
+    while retry_count < max_retries:
+        try:
+            vt_limiter.wait_if_needed()
+            response = requests.get(url, headers=headers, timeout=30)
+        except requests.RequestException as e:
+            return {"status": "error", "error": f"Network error: {e}"}
+
+        if response.status_code == 429:
+            retry_after = int(response.headers.get("Retry-After", 60))
+            print(
+                f" VirusTotal rate limited, waiting {retry_after}s (retry {retry_count + 1}/{max_retries}..."
+            )
+            time.sleep(retry_after)
+            retry_count += 1
+            continue
+
+        break
+
+    if response.status_code == 429:
+        return {
+            "status": "error",
+            "error": f"VirusTotal rate limit exceed after {max_retries} retries",
+        }
 
     if response.status_code == 200:
         data = response.json()
