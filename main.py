@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 from src.virustotal import check_file_hash as check_vt
 from src.malware_bazaar import check_file_hash as check_mb
 from src.hybrid_analysis import check_file_hash as check_ha
+from src.aggregator import aggregate_results
 
 load_dotenv()
 
@@ -126,6 +127,18 @@ def main():
         print(ha_result["message"])
     else:
         print(f"Error: {ha_result['error']}")
+
+    # Combined verdict
+
+    print()
+    print("=== Combined Verdict ===")
+
+    aggregate = aggregate_results(vt_result, mb_result, ha_result)
+    verdict = aggregate["verdict"]
+
+    print(f"Risk level: {verdict['level']} {verdict['icon']}")
+    print(f"Confidence: {verdict['confidence']}")
+    print(f"Recommendation: {verdict['recommendation']}")
 
 
 if __name__ == "__main__":
