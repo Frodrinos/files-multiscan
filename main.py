@@ -2,6 +2,7 @@
 
 import sys
 import hashlib
+import time
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -39,23 +40,13 @@ def compute_hashes(file_path: Path) -> dict:
     }
 
 
-def main():
-    """Entry point."""
+def scan_single_file(file_path: Path) -> dict:
+    """
+    Scan a single file via all API sources.
 
-    if len(sys.argv) < 2:
-        print("Usage: python main.py <file_path>")
-        sys.exit(1)
-
-    file_path = Path(sys.argv[1])
-
-    if not file_path.exists():
-        print(f"File not found: {file_path}")
-        sys.exit(1)
-
-    if not file_path.is_file():
-        print(f"Not a file: {file_path}")
-        sys.exit(1)
-
+    Returns:
+        dict with file info and aggregated verdict
+    """
     hashes = compute_hashes(file_path)
     file_size = file_path.stat().st_size
 
@@ -66,7 +57,6 @@ def main():
     print(f"SHA-1:   {hashes['sha1']}")
 
     # VirusTotal file check
-
     print()
     print("=== VirusTotal ===")
 
@@ -85,7 +75,6 @@ def main():
         print(f"Error: {vt_result['error']}")
 
     # MalwareBazaar file check
-
     print()
     print("=== MalwareBazaar ===")
 
@@ -105,12 +94,10 @@ def main():
         print(f"Error: {mb_result['error']}")
 
     # Hybrid Analysis file check
-
     print()
     print("=== Hybrid Analysis ===")
 
     ha_result = check_ha(hashes["sha256"])
-    print(f"Status: {ha_result['status']}")
 
     if ha_result["status"] == "known":
         print(f"Verdict: {ha_result['verdict']}")
@@ -129,7 +116,6 @@ def main():
         print(f"Error: {ha_result['error']}")
 
     # Combined verdict
-
     print()
     print("=== Combined Verdict ===")
 
@@ -139,6 +125,112 @@ def main():
     print(f"Risk level: {verdict['level']} {verdict['icon']}")
     print(f"Confidence: {verdict['confidence']}")
     print(f"Recommendation: {verdict['recommendation']}")
+
+    return {
+        "file_path": file_path,
+        "verdict": verdict,
+    }
+
+
+def scan_directory(directory: Path) -> None:
+    """
+    Recursively scan all files in a directory.
+    """
+    print(f"files-multiscan: Directory scan mode")
+    print(f"Scanning: {directory}")
+
+    all_files = [f for f in directory.rglob("*") if f.is_file()]
+    total = len(all_files)
+
+    if total == 0:
+        print(f"No files found in {directory}")
+        return
+
+    print(f"Found {total} files.")
+    print()
+
+    counts = {"HIGH": 0, "MEDIUM": 0, "LOW": 0, "UNKNOWN": 0}
+    high_risk_files = []
+
+    for i, file_path in enumerate(all_files, start=1):
+        result = scan_file_compact(file_path)
+        verdict = result["verdict"]
+
+        counts[verdict["level"]] = counts.get(verdict["level"], 0) + 1
+
+        if verdict["level"] == "HIGH":
+            high_risk_files.append(
+                {"path": file_path, "confidence": verdict["confidence"]}
+            )
+
+        print(f"[{i}/{total}] {file_path.name} - {verdict['icon']} {verdict['level']}")
+
+        if i < total:
+            time.sleep(2)
+
+    print()
+    print("=== Scan Summary ===")
+    print(f"Total files scanned: {total}")
+    print(f"🔴 HIGH risk: {counts['HIGH']}")
+    print(f"🟠 MEDIUM risk: {counts['MEDIUM']}")
+    print(f"🟢 LOW risk: {counts['LOW']}")
+    print(f"⚪ UNKNOWN: {counts['UNKNOWN']}")
+
+    if high_risk_files:
+        print()
+        print("Details for HIGH risk files:")
+        for entry in high_risk_files:
+            print(f"- {entry['path']} ({entry['confidence']})")
+
+
+def scan_file_compact(file_path: Path) -> dict:
+    """
+    Scan a single file silently and return aggregated result.
+    Used for directory scanning.
+    """
+    try:
+        hashes = compute_hashes(file_path)
+        vt_result = check_vt(hashes["sha256"])
+        mb_result = check_mb(hashes["sha256"])
+        ha_result = check_ha(hashes["sha256"])
+        aggregate = aggregate_results(vt_result, mb_result, ha_result)
+
+        return {
+            "file_path": file_path,
+            "verdict": aggregate["verdict"],
+        }
+    except Exception as e:
+        return {
+            "file_path": file_path,
+            "verdict": {
+                "level": "UNKNOWN",
+                "icon": "⚪",
+                "confidence": f"Error: {e}",
+                "recommendation": "Could not scan",
+            },
+        }
+
+
+def main():
+    """Entry point."""
+
+    if len(sys.argv) < 2:
+        print("Usage: python main.py <file_or_directory>")
+        sys.exit(1)
+
+    target = Path(sys.argv[1])
+
+    if not target.exists():
+        print(f"Path not found: {target}")
+        sys.exit(1)
+
+    if target.is_file():
+        scan_single_file(target)
+    elif target.is_dir():
+        scan_directory(target)
+    else:
+        print(f"Path is neither file or directory: {target}")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
