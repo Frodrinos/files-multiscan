@@ -26,7 +26,7 @@ def color_level(level: str) -> str:
     return f"{color}{level}"
 
 
-def color_verdict(verdict: srt) -> str:
+def color_verdict(verdict: str) -> str:
     """Return colorized verdict string."""
     color = VERDICT_COLORS.get(verdict, Fore.WHITE)
     return f"{color}{verdict}"
